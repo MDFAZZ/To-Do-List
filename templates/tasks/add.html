@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Task - To-Do List Application{% endblock %}
+
+{% block content %}
+<div class="add-task-container">
+    <div class="header-section">
+        <h2>Add New Task</h2>
+        <a href="{% url 'task_list' %}" class="btn btn-secondary">← Back to Tasks</a>
+    </div>
+    
+    <form id="add-task-form" class="task-form">
+        <div id="error-message" class="error-message" style="display: none;"></div>
+        <div id="success-message" class="success-message" style="display: none;"></div>
+        
+        <div class="form-group">
+            <label for="title">Task Title <span class="required">*</span></label>
+            <input 
+                type="text" 
+                id="title" 
+                name="title" 
+                required 
+                placeholder="Enter task title"
+                class="form-control"
+            >
+            <small class="form-help">A brief title describing the task</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea 
+                id="description" 
+                name="description" 
+                rows="4" 
+                placeholder="Enter task description (optional)"
+                class="form-control"
+            ></textarea>
+            <small class="form-help">Additional details about the task</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="due_date">Due Date</label>
+            <input 
+                type="date" 
+                id="due_date" 
+                name="due_date" 
+                class="form-control"
+            >
+            <small class="form-help">Optional due date for the task</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status" name="status" class="form-control">
+                <option value="pending" selected>Pending</option>
+                <option value="completed">Completed</option>
+            </select>
+            <small class="form-help">Initial status of the task</small>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="submit-btn">Create Task</button>
+            <button type="reset" class="btn btn-secondary">Clear Form</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    /**
+     * Handle form submission to create a new task via API
+     */
+    document.getElementById('add-task-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const errorEl = document.getElementById('error-message');
+        const successEl = document.getElementById('success-message');
+        const submitBtn = document.getElementById('submit-btn');
+        
+        // Hide previous messages
+        errorEl.style.display = 'none';
+        successEl.style.display = 'none';
+        
+        // Get form data
+        const formData = {
+            title: document.getElementById('title').value.trim(),
+            description: document.getElementById('description').value.trim(),
+            due_date: document.getElementById('due_date').value || null,
+            status: document.getElementById('status').value
+        };
+        
+        // Validate title
+        if (!formData.title) {
+            errorEl.textContent = 'Task title is required';
+            errorEl.style.display = 'block';
+            return;
+        }
+        
+        // Disable submit button
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating...';
+        
+        try {
+            const response = await fetch('/api/tasks/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                successEl.textContent = 'Task created successfully! Redirecting...';
+                successEl.style.display = 'block';
+                
+                // Reset form
+                document.getElementById('add-task-form').reset();
+                
+                // Redirect to task list after 1.5 seconds
+                setTimeout(() => {
+                    window.location.href = '{% url "task_list" %}';
+                }, 1500);
+            } else {
+                throw new Error(result.message || result.error || 'Failed to create task');
+            }
+        } catch (error) {
+            errorEl.textContent = `Error: ${error.message}`;
+            errorEl.style.display = 'block';
+            console.error('Error creating task:', error);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Task';
+        }
+    });
+</script>
+{% endblock %}
