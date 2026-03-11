@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  # Django Application
+  web:
+    build: .
+    container_name: todolist_web
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - DJANGO_SETTINGS_MODULE=todolist_project.settings
+    networks:
+      - todolist_network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/tasks').read()" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  static_volume:
+
+
+networks:
+  todolist_network:
+    driver: bridge
