@@ -1,10 +1,5 @@
-"""
-API views for task management.
-
-This module contains all the API endpoints for CRUD operations on tasks.
-All views return JSON responses and handle errors appropriately.
-Following the requirement to not use generic viewsets, all views are custom implementations.
-"""
+# API views for all the task endpoints
+# All custom function-based views (no generic viewsets as per requirements)
 
 import json
 import logging
@@ -12,31 +7,31 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-# Import DRF api_view decorator to make Swagger work with function-based views
-# Note: @api_view is NOT a generic viewset - it's just a decorator for function-based views
+# Using @api_view decorator from DRF just for Swagger compatibility
+# It's not a viewset, just a decorator for function-based views
 try:
     from rest_framework.decorators import api_view
     DRF_AVAILABLE = True
 except ImportError:
     DRF_AVAILABLE = False
-    # Create a no-op decorator if DRF is not available
+    # Fallback if DRF isn't available
     def api_view(http_method_names=None):
         def decorator(func):
             return func
         return decorator
 
-# Try to import Swagger, but make it optional for testing
+# Swagger is optional - app works fine without it
 try:
     from drf_yasg.utils import swagger_auto_schema
     from drf_yasg import openapi
     SWAGGER_AVAILABLE = True
 except ImportError:
-    # Create a no-op decorator if Swagger is not available
+    # Mock decorator if Swagger isn't installed
     def swagger_auto_schema(*args, **kwargs):
         def decorator(func):
             return func
         return decorator
-    # Create a mock openapi module with necessary attributes
+    # Mock classes for when Swagger isn't available
     class MockSchema:
         def __init__(self, *args, **kwargs):
             pass
@@ -71,10 +66,8 @@ logger = logging.getLogger('tasks')
 
 
 def initialize_db_if_needed():
-    """
-    Initialize database on first request if not already initialized.
-    This is a helper function to ensure the database is set up.
-    """
+    # Make sure the database table exists before handling requests
+    # Called at the start of each view
     try:
         initialize_database()
     except Exception as e:
@@ -125,46 +118,12 @@ def initialize_db_if_needed():
 @csrf_exempt
 @api_view(['POST'])
 def create_task_api(request):
-    """
-    API endpoint to create a new task.
-    
-    HTTP Method: POST
-    Content-Type: application/json
-    
-    Request Body:
-        {
-            "title": "string (required)",
-            "description": "string (optional)",
-            "due_date": "YYYY-MM-DD (optional)",
-            "status": "pending|completed (optional, default: pending)"
-        }
-    
-    Response (Success - 201):
-        {
-            "success": true,
-            "message": "Task created successfully",
-            "data": {
-                "id": 1,
-                "title": "Task title",
-                "description": "Task description",
-                "due_date": "2026-03-15",
-                "status": "pending",
-                "created_at": "2026-03-10 10:00:00",
-                "updated_at": "2026-03-10 10:00:00"
-            }
-        }
-    
-    Response (Error - 400):
-        {
-            "success": false,
-            "message": "Error message",
-            "error": "Detailed error information"
-        }
-    """
+    # POST /api/tasks/ - Creates a new task
+    # Expects JSON with title (required), description, due_date, status (optional)
     initialize_db_if_needed()
     
     try:
-        # Parse JSON request body
+        # Parse the JSON body
         try:
             data = json.loads(request.body.decode('utf-8'))
         except json.JSONDecodeError:
@@ -175,13 +134,13 @@ def create_task_api(request):
                 'error': 'Request body must be valid JSON'
             }, status=400)
         
-        # Extract task data
+        # Pull out the fields
         title = data.get('title')
         description = data.get('description')
         due_date = data.get('due_date')
         status = data.get('status', 'pending')
         
-        # Create task using service
+        # Create it via the service layer
         task = TaskService.create_task(
             title=title,
             description=description,
@@ -234,37 +193,7 @@ def create_task_api(request):
 )
 @api_view(['GET'])
 def get_all_tasks_api(request):
-    """
-    API endpoint to retrieve all tasks.
-    
-    HTTP Method: GET
-    
-    Response (Success - 200):
-        {
-            "success": true,
-            "message": "Tasks retrieved successfully",
-            "data": [
-                {
-                    "id": 1,
-                    "title": "Task title",
-                    "description": "Task description",
-                    "due_date": "2026-03-15",
-                    "status": "pending",
-                    "created_at": "2026-03-10 10:00:00",
-                    "updated_at": "2026-03-10 10:00:00"
-                },
-                ...
-            ],
-            "count": 2
-        }
-    
-    Response (Error - 500):
-        {
-            "success": false,
-            "message": "Internal server error",
-            "error": "Error details"
-        }
-    """
+    # GET /api/tasks - Returns all tasks
     initialize_db_if_needed()
     
     try:
@@ -313,34 +242,7 @@ def get_all_tasks_api(request):
 )
 @api_view(['GET'])
 def get_task_api(request, task_id):
-    """
-    API endpoint to retrieve a specific task by ID.
-    
-    HTTP Method: GET
-    URL Parameter: task_id (integer)
-    
-    Response (Success - 200):
-        {
-            "success": true,
-            "message": "Task retrieved successfully",
-            "data": {
-                "id": 1,
-                "title": "Task title",
-                "description": "Task description",
-                "due_date": "2026-03-15",
-                "status": "pending",
-                "created_at": "2026-03-10 10:00:00",
-                "updated_at": "2026-03-10 10:00:00"
-            }
-        }
-    
-    Response (Not Found - 404):
-        {
-            "success": false,
-            "message": "Task not found",
-            "error": "Task with the specified ID does not exist"
-        }
-    """
+    # GET /api/tasks/{id}/ - Gets a single task by ID
     initialize_db_if_needed()
     
     try:
@@ -404,49 +306,14 @@ def get_task_api(request, task_id):
 @csrf_exempt
 @api_view(['PUT', 'PATCH'])
 def update_task_api(request, task_id):
-    """
-    API endpoint to update an existing task.
-    
-    HTTP Method: PUT or PATCH
-    URL Parameter: task_id (integer)
-    Content-Type: application/json
-    
-    Request Body (all fields optional):
-        {
-            "title": "string (optional)",
-            "description": "string (optional)",
-            "due_date": "YYYY-MM-DD (optional)",
-            "status": "pending|completed (optional)"
-        }
-    
-    Response (Success - 200):
-        {
-            "success": true,
-            "message": "Task updated successfully",
-            "data": {
-                "id": 1,
-                "title": "Updated title",
-                "description": "Updated description",
-                "due_date": "2026-03-20",
-                "status": "completed",
-                "created_at": "2026-03-10 10:00:00",
-                "updated_at": "2026-03-10 11:00:00"
-            }
-        }
-    
-    Response (Not Found - 404):
-        {
-            "success": false,
-            "message": "Task not found",
-            "error": "Task with the specified ID does not exist"
-        }
-    """
+    # PUT/PATCH /api/tasks/{id}/update/ - Updates a task
+    # All fields in the JSON body are optional - only provided ones get updated
     initialize_db_if_needed()
     
     try:
         task_id = int(task_id)
         
-        # Parse JSON request body
+        # Parse JSON
         try:
             data = json.loads(request.body.decode('utf-8'))
         except json.JSONDecodeError:
@@ -457,13 +324,13 @@ def update_task_api(request, task_id):
                 'error': 'Request body must be valid JSON'
             }, status=400)
         
-        # Extract update data (all optional)
+        # Get the fields to update (all optional)
         title = data.get('title')
         description = data.get('description')
         due_date = data.get('due_date')
         status = data.get('status')
         
-        # Update task using service
+        # Update via service
         task = TaskService.update_task(
             task_id=task_id,
             title=title,
@@ -528,25 +395,7 @@ def update_task_api(request, task_id):
 @csrf_exempt
 @api_view(['DELETE'])
 def delete_task_api(request, task_id):
-    """
-    API endpoint to delete a task.
-    
-    HTTP Method: DELETE
-    URL Parameter: task_id (integer)
-    
-    Response (Success - 200):
-        {
-            "success": true,
-            "message": "Task deleted successfully"
-        }
-    
-    Response (Not Found - 404):
-        {
-            "success": false,
-            "message": "Task not found",
-            "error": "Task with the specified ID does not exist"
-        }
-    """
+    # DELETE /api/tasks/{id}/delete/ - Deletes a task
     initialize_db_if_needed()
     
     try:
@@ -584,24 +433,16 @@ def delete_task_api(request, task_id):
 
 
 def task_list_view(request):
-    """
-    Web interface view to display the list of tasks.
-    
-    This view renders the HTML template for displaying all tasks.
-    The template uses JavaScript to fetch tasks from the API endpoint.
-    """
+    # Web view - renders the main task list page
+    # The template uses JS to fetch tasks from the API
     initialize_db_if_needed()
     from django.shortcuts import render
     return render(request, 'tasks/list.html')
 
 
 def add_task_view(request):
-    """
-    Web interface view to display the form for adding a new task.
-    
-    This view renders the HTML template for adding tasks.
-    The template uses JavaScript to submit tasks to the API endpoint.
-    """
+    # Web view - renders the add task form page
+    # Form submission is handled by JS calling the API
     initialize_db_if_needed()
     from django.shortcuts import render
     return render(request, 'tasks/add.html')

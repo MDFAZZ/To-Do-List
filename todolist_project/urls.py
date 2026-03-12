@@ -1,15 +1,10 @@
-"""
-URL configuration for todolist_project.
-
-This module defines the URL routing for the entire application.
-All API endpoints and web interface routes are configured here.
-"""
+# Main URL configuration for the project
 
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 
-# Try to import Swagger, but make it optional
+# Try to set up Swagger, but it's optional
 try:
     from drf_yasg.views import get_schema_view
     from drf_yasg import openapi
@@ -19,22 +14,21 @@ except ImportError:
     schema_view = None
 
 urlpatterns = [
-    # Include URLs from the tasks app
+    # Include all the task URLs
     path('', include('tasks.urls')),
 ]
 
-# Add Swagger URLs only if available
+# Add Swagger docs if available
 if SWAGGER_AVAILABLE:
     try:
-        # Try to import DRF permissions, but make it optional
+        # Get permissions class if DRF is available
         try:
             from rest_framework.permissions import AllowAny
             permission_classes = (AllowAny,)
         except ImportError:
-            # DRF not available, use empty tuple
             permission_classes = ()
         
-        # Create schema view with manual patterns to ensure function-based views are discovered
+        # Set up the schema view for Swagger
         schema_view = get_schema_view(
             openapi.Info(
                 title="To-Do List API",
@@ -57,32 +51,32 @@ if SWAGGER_AVAILABLE:
                 license=openapi.License(name="Proprietary"),
             ),
             public=True,
-            permission_classes=permission_classes,  # Allow access without authentication
-            patterns=[path('api/', include('tasks.urls'))],  # Include API patterns for discovery
+            permission_classes=permission_classes,
+            patterns=[path('api/', include('tasks.urls'))],
         )
         
-        # Swagger/OpenAPI Documentation URLs
+        # Swagger UI URLs
         urlpatterns = [
             re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
             path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
             path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
         ] + urlpatterns
     except (Exception, RuntimeError) as e:
-        # If Swagger fails to initialize (e.g., missing auth app, pkg_resources, etc.)
-        # Continue without it and use fallback views
+        # Swagger failed to initialize - might be missing dependencies
+        # Just continue without it
         import logging
         logger = logging.getLogger('tasks')
         logger.warning(f"Swagger documentation not available: {str(e)}")
-        SWAGGER_AVAILABLE = False  # Mark as unavailable for fallback
-# Add fallback views if Swagger is not available
+        SWAGGER_AVAILABLE = False
+
+# Fallback if Swagger isn't available
 if not SWAGGER_AVAILABLE:
-    # Swagger not available - add helpful message views
     from django.http import JsonResponse
     from django.views.decorators.http import require_http_methods
     
     @require_http_methods(["GET"])
     def swagger_unavailable(request):
-        """Return a helpful message when Swagger is not available."""
+        # Return a helpful message when Swagger isn't working
         return JsonResponse({
             'message': 'Swagger documentation is not available',
             'reason': 'Swagger requires Python 3.11 or 3.12 with setuptools, or Docker environment',
@@ -94,7 +88,7 @@ if not SWAGGER_AVAILABLE:
             'note': 'All API endpoints are fully functional. Swagger is optional documentation only.'
         }, status=503)
     
-    # Add placeholder URLs that return helpful messages
+    # Add placeholder URLs
     urlpatterns = [
         re_path(r'^swagger(?P<format>\.json|\.yaml)$', swagger_unavailable, name='schema-json'),
         path('swagger/', swagger_unavailable, name='schema-swagger-ui'),

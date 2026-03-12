@@ -1,47 +1,37 @@
-"""
-Django settings for todolist_project.
-
-This module contains all the configuration settings for the To-Do List application.
-"""
+# Django settings for the todo list project
 
 from pathlib import Path
 import os
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+# Development settings - change these for production!
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-dev-key-change-in-production-12345'
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
 
-# Application definition
+# Installed apps
 
-# Base installed apps
-# Note: django.contrib.auth is included for Swagger compatibility
 INSTALLED_APPS = [
-    'django.contrib.auth',  # Required for Swagger and some Django features
+    'django.contrib.auth',  # Needed for Swagger
     'django.contrib.contenttypes',
     'django.contrib.staticfiles',
-    'rest_framework',  # DRF for @api_view decorator (not a viewset, just a decorator)
-    'tasks',  # Our tasks application
+    'rest_framework',  # Using @api_view decorator (not viewsets)
+    'tasks',  # Our main app
 ]
 
-# Try to add Swagger if available (optional)
+# Try to add Swagger if it's installed (optional)
 try:
     import drf_yasg
-    INSTALLED_APPS.append('drf_yasg')  # Swagger/OpenAPI documentation
+    INSTALLED_APPS.append('drf_yasg')
 except (ImportError, ModuleNotFoundError):
-    # Swagger not available (e.g., Python 3.13 compatibility issue or missing pkg_resources)
-    # Application will work without Swagger documentation
+    # Swagger might not work on Python 3.13 or if pkg_resources is missing
+    # App works fine without it
     pass
 
 MIDDLEWARE = [
@@ -71,9 +61,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'todolist_project.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
+# Database - using SQLite for simplicity
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -82,8 +70,7 @@ DATABASES = {
 }
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
+# Internationalization settings
 
 LANGUAGE_CODE = 'en-us'
 
@@ -94,20 +81,16 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
+# Static files (CSS, JS, images)
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Logging configuration
+# Logging setup - writes to both console and file
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -147,7 +130,7 @@ LOGGING = {
     },
 }
 
-# Cache Configuration (using in-memory cache)
+# In-memory cache (not really using it much, but Django expects it)
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -155,17 +138,16 @@ CACHES = {
     }
 }
 
-# Swagger/OpenAPI settings for drf-yasg
-# Configure to work with function-based views and disable authentication
+# Swagger settings - disable auth since we don't need it
 try:
     import drf_yasg
     SWAGGER_SETTINGS = {
-        'USE_SESSION_AUTH': False,  # Disable session authentication
-        'LOGIN_URL': None,  # No login required
+        'USE_SESSION_AUTH': False,
+        'LOGIN_URL': None,
         'LOGOUT_URL': None,
-        'VALIDATOR_URL': None,  # Disable schema validation
-        'SECURITY_DEFINITIONS': {},  # No security definitions needed
-        'DEFAULT_INFO': None,  # Will use the one from get_schema_view
+        'VALIDATOR_URL': None,
+        'SECURITY_DEFINITIONS': {},
+        'DEFAULT_INFO': None,
     }
 except ImportError:
     pass

@@ -1,10 +1,5 @@
-"""
-Database utility module for task management.
-
-This module provides functions for database initialization and raw SQL operations.
-Following the requirement to not use Django ORM, all database operations are
-performed using raw SQL queries.
-"""
+# Database utilities - handling all the raw SQL stuff
+# Not using Django ORM as per requirements, so everything is manual SQL queries
 
 import sqlite3
 import logging
@@ -15,19 +10,12 @@ logger = logging.getLogger('tasks')
 
 
 def get_db_connection():
-    """
-    Create and return a database connection.
-    
-    Returns:
-        sqlite3.Connection: Database connection object
-        
-    Raises:
-        sqlite3.Error: If connection cannot be established
-    """
+    # Get a connection to the SQLite database
+    # Using row_factory so we can access columns by name instead of index
     try:
         db_path = settings.DATABASES['default']['NAME']
         conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row  # Enable column access by name
+        conn.row_factory = sqlite3.Row  # Makes life easier when reading results
         logger.debug(f"Database connection established: {db_path}")
         return conn
     except sqlite3.Error as e:
@@ -36,23 +24,13 @@ def get_db_connection():
 
 
 def initialize_database():
-    """
-    Initialize the database by creating the tasks table if it doesn't exist.
-    
-    This function creates a table with the following fields:
-    - id: Primary key (auto-increment)
-    - title: Task title (required)
-    - description: Task description (optional)
-    - due_date: Due date in ISO format (optional)
-    - status: Task status (pending/completed, default: pending)
-    - created_at: Timestamp of creation
-    - updated_at: Timestamp of last update
-    """
+    # Creates the tasks table if it doesn't exist
+    # Also adds an index on status field for faster queries
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Create tasks table with all required fields
+        # Main table structure
         create_table_query = """
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -69,7 +47,7 @@ def initialize_database():
         conn.commit()
         logger.info("Database table 'tasks' initialized successfully")
         
-        # Create index on status for better query performance
+        # Index on status helps when filtering by pending/completed
         cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_tasks_status 
         ON tasks(status)

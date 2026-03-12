@@ -1,9 +1,5 @@
-"""
-Test suite for the To-Do List application.
-
-This module contains comprehensive tests for all API endpoints
-and database operations using pytest and pytest-django.
-"""
+# Test suite for the todo app
+# Using pytest and pytest-django for testing
 
 import pytest
 import json
@@ -15,11 +11,8 @@ from .task_service import TaskService
 
 @pytest.fixture(autouse=True)
 def setup_database(db):
-    """
-    Fixture to initialize database before each test.
-    This ensures a clean database state for each test.
-    """
-    # Clear database before each test
+    # Clean up the database before and after each test
+    # Makes sure tests don't interfere with each other
     from tasks.database import get_db_connection
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -29,7 +22,7 @@ def setup_database(db):
     
     initialize_database()
     yield
-    # Cleanup after test
+    # Cleanup after test runs
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM tasks")
@@ -39,14 +32,12 @@ def setup_database(db):
 
 @pytest.fixture
 def client():
-    """
-    Fixture to provide a Django test client.
-    """
+    # Django test client for making requests
     return Client()
 
 
 class TestTaskService:
-    """Test cases for TaskService class (business logic layer)."""
+    # Tests for the service layer (business logic)
     
     def test_create_task_success(self):
         """Test successful task creation."""
@@ -183,7 +174,7 @@ class TestTaskService:
 
 
 class TestTaskAPI:
-    """Test cases for API endpoints."""
+    # Tests for the API endpoints
     
     def test_create_task_api_success(self, client):
         """Test successful task creation via API."""
@@ -353,16 +344,16 @@ class TestTaskAPI:
 
 
 class TestDatabaseOperations:
-    """Test cases for database operations."""
+    # Tests for database setup and initialization
     
     def test_database_initialization(self):
-        """Test that database initialization creates the table."""
+        # Make sure the table gets created properly
         initialize_database()
         
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Check if table exists
+        # Check if the tasks table exists
         cursor.execute("""
             SELECT name FROM sqlite_master 
             WHERE type='table' AND name='tasks'
@@ -375,13 +366,13 @@ class TestDatabaseOperations:
         conn.close()
     
     def test_database_index_creation(self):
-        """Test that indexes are created on database initialization."""
+        # Verify that the status index gets created
         initialize_database()
         
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Check if index exists
+        # Check if the index exists
         cursor.execute("""
             SELECT name FROM sqlite_master 
             WHERE type='index' AND name='idx_tasks_status'

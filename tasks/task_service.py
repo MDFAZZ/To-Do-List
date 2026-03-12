@@ -1,9 +1,5 @@
-"""
-Task service module for business logic and database operations.
-
-This module contains all the business logic for task CRUD operations.
-All database operations use raw SQL queries as per requirements (no ORM).
-"""
+# Business logic layer for task operations
+# All the CRUD stuff happens here, using raw SQL (no ORM)
 
 import sqlite3
 import logging
@@ -16,32 +12,14 @@ logger = logging.getLogger('tasks')
 
 
 class TaskService:
-    """
-    Service class for managing task operations.
-    
-    This class provides methods for all CRUD operations on tasks,
-    using raw SQL queries instead of Django ORM.
-    """
+    # Handles all task operations - create, read, update, delete
+    # Everything uses raw SQL queries
     
     @staticmethod
     def create_task(title: str, description: str = None, 
                    due_date: str = None, status: str = 'pending') -> Dict:
-        """
-        Create a new task in the database.
-        
-        Args:
-            title (str): Task title (required)
-            description (str, optional): Task description
-            due_date (str, optional): Due date in ISO format (YYYY-MM-DD)
-            status (str): Task status, defaults to 'pending'
-            
-        Returns:
-            dict: Created task data with generated ID and timestamps
-            
-        Raises:
-            ValueError: If title is empty or status is invalid
-            sqlite3.Error: If database operation fails
-        """
+        # Creates a new task in the database
+        # Validates title and status before inserting
         if not title or not title.strip():
             logger.warning("Attempted to create task with empty title")
             raise ValueError("Task title is required")
@@ -54,7 +32,7 @@ class TaskService:
             conn = get_db_connection()
             cursor = conn.cursor()
             
-            # Insert new task
+            # Insert the new task
             insert_query = """
             INSERT INTO tasks (title, description, due_date, status, created_at, updated_at)
             VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
@@ -63,7 +41,7 @@ class TaskService:
             cursor.execute(insert_query, (title.strip(), description, due_date, status))
             task_id = cursor.lastrowid
             
-            # Retrieve the created task
+            # Fetch it back to return the complete task with timestamps
             select_query = "SELECT * FROM tasks WHERE id = ?"
             cursor.execute(select_query, (task_id,))
             row = cursor.fetchone()
@@ -85,20 +63,12 @@ class TaskService:
     
     @staticmethod
     def get_all_tasks() -> List[Dict]:
-        """
-        Retrieve all tasks from the database.
-        
-        Returns:
-            list: List of task dictionaries, ordered by creation date (newest first)
-            
-        Raises:
-            sqlite3.Error: If database operation fails
-        """
+        # Gets all tasks, newest first
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
             
-            # Retrieve all tasks ordered by creation date
+            # Order by created_at DESC so newest tasks appear first
             select_query = """
             SELECT * FROM tasks 
             ORDER BY created_at DESC
@@ -121,18 +91,7 @@ class TaskService:
     
     @staticmethod
     def get_task_by_id(task_id: int) -> Optional[Dict]:
-        """
-        Retrieve a specific task by its ID.
-        
-        Args:
-            task_id (int): The ID of the task to retrieve
-            
-        Returns:
-            dict: Task data if found, None otherwise
-            
-        Raises:
-            sqlite3.Error: If database operation fails
-        """
+        # Gets a single task by ID, returns None if not found
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -161,23 +120,8 @@ class TaskService:
     @staticmethod
     def update_task(task_id: int, title: str = None, description: str = None,
                    due_date: str = None, status: str = None) -> Optional[Dict]:
-        """
-        Update an existing task in the database.
-        
-        Args:
-            task_id (int): The ID of the task to update
-            title (str, optional): New task title
-            description (str, optional): New task description
-            due_date (str, optional): New due date in ISO format
-            status (str, optional): New task status
-            
-        Returns:
-            dict: Updated task data if found, None otherwise
-            
-        Raises:
-            ValueError: If status is invalid
-            sqlite3.Error: If database operation fails
-        """
+        # Updates a task - only updates fields that are provided (partial updates)
+        # Returns None if task doesn't exist
         if status and status not in ['pending', 'completed']:
             logger.warning(f"Invalid status provided: {status}")
             raise ValueError("Status must be 'pending' or 'completed'")
@@ -186,7 +130,7 @@ class TaskService:
             conn = get_db_connection()
             cursor = conn.cursor()
             
-            # Check if task exists (direct query to avoid cache issues)
+            # Check if task exists first
             select_query = "SELECT * FROM tasks WHERE id = ?"
             cursor.execute(select_query, (task_id,))
             row = cursor.fetchone()
@@ -195,7 +139,7 @@ class TaskService:
                 logger.warning(f"Attempted to update non-existent task with ID: {task_id}")
                 return None
             
-            # Build dynamic update query based on provided fields
+            # Build the UPDATE query dynamically based on what fields were provided
             update_fields = []
             update_values = []
             
@@ -217,13 +161,13 @@ class TaskService:
                 update_fields.append("status = ?")
                 update_values.append(status)
             
+            # If nothing to update, just return the existing task
             if not update_fields:
                 conn.close()
                 logger.warning(f"No fields provided for update on task {task_id}")
-                # Return existing task data
                 return TaskService._row_to_dict(row)
             
-            # Always update the updated_at timestamp
+            # Always bump the updated_at timestamp
             update_fields.append("updated_at = datetime('now')")
             update_values.append(task_id)
             
@@ -233,7 +177,7 @@ class TaskService:
             conn.commit()
             conn.close()
             
-            # Retrieve updated task
+            # Fetch the updated task to return
             updated_task = TaskService.get_task_by_id(task_id)
             logger.info(f"Task {task_id} updated successfully")
             return updated_task
@@ -247,23 +191,12 @@ class TaskService:
     
     @staticmethod
     def delete_task(task_id: int) -> bool:
-        """
-        Delete a task from the database.
-        
-        Args:
-            task_id (int): The ID of the task to delete
-            
-        Returns:
-            bool: True if task was deleted, False if task not found
-            
-        Raises:
-            sqlite3.Error: If database operation fails
-        """
+        # Deletes a task, returns False if it doesn't exist
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
             
-            # Check if task exists (direct query to avoid cache issues)
+            # Check if it exists first
             select_query = "SELECT * FROM tasks WHERE id = ?"
             cursor.execute(select_query, (task_id,))
             row = cursor.fetchone()
@@ -291,15 +224,8 @@ class TaskService:
     
     @staticmethod
     def _row_to_dict(row: sqlite3.Row) -> Dict:
-        """
-        Convert a database row to a dictionary.
-        
-        Args:
-            row (sqlite3.Row): Database row object
-            
-        Returns:
-            dict: Dictionary representation of the row
-        """
+        # Helper to convert SQLite row objects to plain dictionaries
+        # Makes it easier to work with the data
         if row is None:
             return None
         
